@@ -1,13 +1,33 @@
-resource "aws_vpc" "main" {
-  cidr_block = var.vpc_cidr
-  tags = { Name = "main-vpc" }
+terraform {
+  required_version = ">= 1.0.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 4.0.0"
+    }
+  }
 }
 
-variable "vpc_cidr" {
-  type    = string
-  default = "10.0.0.0/16"
-}
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 5.0"
 
-output "vpc_id" {
-  value = aws_vpc.main.id
+  name = "${var.environment}-${var.project_name}-vpc"
+  cidr = var.vpc_cidr
+
+  azs             = var.availability_zones
+  private_subnets = var.private_subnets
+  public_subnets  = var.public_subnets
+
+  enable_nat_gateway = var.enable_nat_gateway
+  single_nat_gateway = var.single_nat_gateway
+
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project_name
+    Terraform   = "true"
+  }
 }
