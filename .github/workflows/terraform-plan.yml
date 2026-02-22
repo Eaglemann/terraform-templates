@@ -1,0 +1,100 @@
+name: "Terraform Plan & Security Scan"
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    name: "Terraform Checks"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout the repository to the runner
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform with specified version on the runner
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6.0"
+
+      - name: Terraform Format
+        id: fmt
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Checkov Security Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: ./modules
+          quiet: false # Display output in the console
+          soft_fail: true # Do not fail the build for now
+
+      - name: Terraform Test (Networking Module)
+        id: test-networking
+        run: |
+          cd modules/networking
+          terraform init
+          terraform test
+        continue-on-error: true
+
+      - name: Terraform Test (Storage Module)
+        id: test-storage
+        run: |
+          cd modules/storage
+          terraform init
+          terraform test
+        continue-on-error: true
+
+      # Iterate over environments. Here we just show `dev` as an example.
+      # In a real environment, you might use a matrix strategy or a specialized tool like Atlantis
+      - name: Terraform Init (dev)
+        id: init
+        run: terraform init
+        working-directory: environments/dev
+
+      - name: Terraform Validate (dev)
+        id: validate
+        run: terraform validate -no-color
+        working-directory: environments/dev
+
+      - name: Terraform Plan (dev)
+        id: plan
+        if: github.event_name == 'pull_request'
+        run: terraform plan -no-color -out=tfplan
+        working-directory: environments/dev
+        continue-on-error: true
+
+      - name: Update Pull Request
+        uses: actions/github-script@v6
+        if: github.event_name == 'pull_request'
+        env:
+          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            <details><summary>Show Plan (dev)</summary>
+
+            \`\`\`\n
+            ${process.env.PLAN}
+            \`\`\`
+
+            </details>
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
