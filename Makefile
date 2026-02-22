@@ -18,6 +18,7 @@ help:
 	@echo "  apply   - Run terraform apply in the specified environment"
 	@echo "  destroy - Run terraform destroy in the specified environment"
 	@echo "  fmt     - Format all terraform files in the repository"
+	@echo "  docs    - Generate README.md documentation for all modules"
 	@echo "  test    - Run terraform test in the specified module (e.g., make test MODULE=networking)"
 
 init:
@@ -39,6 +40,10 @@ destroy:
 fmt:
 	@echo "Formatting all Terraform files..."
 	terraform fmt -recursive
+
+docs:
+	@echo "Generating Terraform module documentation..."
+	@find modules environments templates -type d -not -path "*/.terraform/*" -exec bash -c 'ls {}/*.tf >/dev/null 2>&1 && terraform-docs markdown document --output-file README.md --output-mode replace {} || true' \;
 
 test:
 	@echo "Testing module $(MODULE)..."
