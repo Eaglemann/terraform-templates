@@ -9,12 +9,15 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
 
-      - name: Render terraform docs
-        uses: terraform-docs/gh-actions@v1.0.0
-        with:
-          working-dir: .
-          output-file: README.md
-          output-method: inject
+      - name: Install terraform-docs
+        run: |
+          curl -sSLo ./terraform-docs.tar.gz https://github.com/terraform-docs/terraform-docs/releases/download/v0.16.0/terraform-docs-v0.16.0-linux-amd64.tar.gz
+          tar -xzf terraform-docs.tar.gz
+          chmod +x terraform-docs
+          sudo mv terraform-docs /usr/local/bin/terraform-docs
+
+      - name: Render Terraform docs
+        run: make docs
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
