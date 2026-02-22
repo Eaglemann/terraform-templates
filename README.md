@@ -30,3 +30,20 @@ Modify variables and state configurations as needed.
 ## Module Documentation
 
 Module-level documentation is generated automatically by `terraform-docs` configured in `.github/workflows/docs.yml`. Upon pushing or opening a Pull Request, GitHub Actions will inject a `README.md` into each module detailing its inputs, outputs, and requirements.
+
+## Testing
+
+This repository uses the native Terraform testing framework (`.tftest.hcl`), available in Terraform v1.6.0 and later, to validate module behavior via actual infrastructure provisioning and tear down (`terraform apply` and assertions).
+
+To test a specific module locally:
+```bash
+# Using the pre-configured Makefile
+make test MODULE=networking
+
+# Or using the Terraform CLI directly
+cd modules/networking
+terraform init
+terraform test
+```
+
+*Note: running `terraform test` requires active AWS credentials as it provisions real resources in a sandbox environment and destroys them upon test completion.*
